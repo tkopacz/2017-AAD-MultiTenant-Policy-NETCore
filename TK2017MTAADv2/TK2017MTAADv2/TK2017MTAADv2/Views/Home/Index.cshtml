@@ -1,0 +1,17 @@
+﻿@model IEnumerable<System.Security.Claims.Claim>
+@{  
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="row">
+    <div class="col-md-3">
+        <h2>Claims</h2>
+        <ul>
+            @foreach (var item in Model)
+            {
+                <li>@item.Type - @item.Value</li>
+            }
+        </ul>
+
+    </div>
+</div>
