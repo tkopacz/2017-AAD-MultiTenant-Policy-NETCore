@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Graph;
 using System.Diagnostics;
+using TK2017MTAADv2.Models;
 
 namespace Microsoft.AspNetCore.Authentication.Extensions
 {
@@ -23,35 +24,30 @@ namespace Microsoft.AspNetCore.Authentication.Extensions
     /// </remarks>
     public class AzureAdOpenIdConnectOptionsSetup : IConfigureOptions<OpenIdConnectOptions>
     {
-        private readonly AzureAdOptions _aadOptions;
+        private readonly AzureAdOptions m_aadOptions;
+        private readonly TenantContext m_db;
 
-        public AzureAdOpenIdConnectOptionsSetup(IOptions<AzureAdOptions> aadOptions)
+        public AzureAdOpenIdConnectOptionsSetup(IOptions<AzureAdOptions> aadOptions, TenantContext db)
         {
-            _aadOptions = aadOptions.Value;
+            m_aadOptions = aadOptions.Value;
+            m_db = db;
         }
 
         public void Configure(OpenIdConnectOptions oidcOptions)
         {
-            oidcOptions.ClientId = _aadOptions.ClientId;
-            oidcOptions.Authority = _aadOptions.Authority;
+            oidcOptions.ClientId = m_aadOptions.ClientId;
+            oidcOptions.Authority = m_aadOptions.Authority;
             oidcOptions.UseTokenLifetime = true;
-            oidcOptions.CallbackPath = _aadOptions.CallbackPath;
+            oidcOptions.CallbackPath = m_aadOptions.CallbackPath;
             oidcOptions.ResponseType = "code id_token";
-            oidcOptions.ClientSecret = _aadOptions.ClientSecret; //Required - for client assertion!
+            oidcOptions.ClientSecret = m_aadOptions.ClientSecret; //Required - for client assertion!
             //Could also request groups from AAD during login - but - we will get only guid's not names
 
             oidcOptions.TokenValidationParameters = new TokenValidationParameters
             {
                 // Instead of using the default validation (validating against a single issuer value, as we do in line of business apps),
                 // we inject our own multitenant validation logic
-                //ValidateIssuer = false,
-
-                // If the app is meant to be accessed by entire organizations, add your issuer validation logic here.
-                IssuerValidator = (issuer, securityToken, validationParameters) =>
-                {
-                    if (myIssuerValidationLogic(issuer)) return issuer;
-                    return "ERROR";
-                }
+                ValidateIssuer = false,
             };
 
             oidcOptions.Events = new OpenIdConnectEvents
@@ -80,14 +76,15 @@ namespace Microsoft.AspNetCore.Authentication.Extensions
                         try
                         {
                             List<Claim> claims;
-                            var gsc = new GraphServiceClient(new AzureAuthenticationProvider(_aadOptions, context.Ticket.Principal, context.TokenEndpointRequest.Code));
-                            
-                            //To read groups - we need admin consen
+                            var gsc = new GraphServiceClient(new AzureAuthenticationProvider(m_aadOptions, context.Ticket.Principal, context.TokenEndpointRequest.Code));
+
+                            //To read groups - we need admin consent
                             var me = await gsc.Me.Request().GetAsync();
+                            //Get group name require admin consent
                             var myGroup = await gsc.Me.MemberOf.Request().GetAsync();
                             claims = generateClaims(myGroup);
                             
-                            //Including Transitive, DirectoryObjects require admin roles!
+                            //Including Transitive, DirectoryObjects!
                             //var objects = await gsc.DirectoryObjects.GetByIds(me.ToList(), new string[] { "group", "directoryRole" }).Request().PostAsync();
                             //claims = generateClaims(objects);
 
@@ -132,12 +129,15 @@ namespace Microsoft.AspNetCore.Authentication.Extensions
         //TK:
         private bool myIssuerValidationLogic(string issuer)
         {
-            return true; //Any Tenant
+            return false; //Any Tenant
         }
 
-        private async Task myUserValidationLogic(ClaimsPrincipal principal)
+        private Task myUserValidationLogic(ClaimsPrincipal principal)
         {
-            return;
+            string tenantID = principal.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value.ToLower();
+
+            if (m_db.Tenants.FirstOrDefault(p => p.TenantGuid == tenantID) != null) return Task.FromResult(0);
+            throw new UnauthorizedAccessException();//
         }
     }
 }

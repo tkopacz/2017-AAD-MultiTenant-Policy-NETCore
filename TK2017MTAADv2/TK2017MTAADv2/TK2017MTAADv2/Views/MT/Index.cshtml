@@ -1,7 +1,22 @@
-﻿
+﻿@model TK2017MTAADv2.Models.Tenant
 @{
     ViewData["Title"] = "MT - Index";
 }
 
 <h2>MT - Index</h2>
+<form asp-controller="MT" asp-action="SignUp" asp-route-returnurl="@ViewData["ReturnUrl"]" method="post" class="form-horizontal">
+    <h4>Register new Tenant</h4>
+    <hr />
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="form-group">
+        <label asp-for="GroupGuid" class="col-md-2 control-label"></label>
+        <input type="text" asp-for="GroupGuid" class="form-control" />
+        <span asp-validation-for="GroupGuid" class="text-danger"></span>
+        <label asp-for="IsAdmin" class="col-md-2 control-label"></label>
+        <input type="checkbox" asp-for="IsAdmin" class="form-control" />
+        <span asp-validation-for="IsAdmin" class="text-danger"></span>
+        
+        <button type="submit" class="btn btn-default">SignUp</button>
+    </div>
 
+</form>
