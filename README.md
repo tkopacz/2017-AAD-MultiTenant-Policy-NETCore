@@ -2,8 +2,8 @@
 ## Summary
 How to build a simple, policy-based authorization in the multitenat application. Using Azure Active Directory. Using .NET Core 2.0 Preview 1
 ## Project Structure
-Application is registered in tkdxpl.onmicrosoft.com
-URL: https://localhost:44302/ 
+Application is registered in tkdxpl.onmicrosoft.com, as multitenant
+URL: https://localhost:44359/ 
 
 ### Azure Active Directory manifest
 
@@ -15,7 +15,10 @@ Azure Active Directory manifest (https://portal.azure.com, Azure Active Director
 ...
 }
 ```
+![](AAD UI for App Registration)
+
 ### Startup.cs
+
 Startup.cs - setup authorization and policies
 ```csharp
 ...
@@ -37,7 +40,6 @@ services.AddAuthorization(options =>
         new string[] { "8542e184-3375-49de-8401-131a73ed9d9c",
             "57fda17b-7e8d-4ba6-8e0d-8a8fe4539564" }));
 });
-
 ```
 
 ### Use policies in HomeContoller.cs
@@ -267,7 +269,7 @@ To delete consent, go https://portal.office.com/account/#apps
 
 ## Users to test
 
-| Login                              | Password  |description                                              |
-|------------------------------------|-----------|---------------------------------------------------------|
-|demopolicyok@tkdxpl.onmicrosoft.com | Has@lo1#q |Job Title atrribute is equal to *jobtitle*               |
-|demoadmin1@tkdxpl.onmicrosoft.com   | Has@lo1#q |User belong to group 57fda17b-7e8d-4ba6-8e0d-8a8fe4539564|
+| Login                               | Password  | description                              |
+| ----------------------------------- | --------- | ---------------------------------------- |
+| demopolicyok@tkdxpl.onmicrosoft.com | Has@lo1#q | Job Title atrribute is equal to *jobtitle* |
+| demoadmin1@tkdxpl.onmicrosoft.com   | Has@lo1#q | User belong to group 57fda17b-7e8d-4ba6-8e0d-8a8fe4539564 |
