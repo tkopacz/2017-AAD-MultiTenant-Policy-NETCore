@@ -1,3 +1,4 @@
+# Description in progres, code is working
 # 2017-AAD-MultiTenant-Policy-NETCore
 ## Summary
 How to build a simple, policy-based authorization in the multitenat application. Using Azure Active Directory. Using .NET Core 2.0 Preview 1
@@ -12,35 +13,52 @@ Azure Active Directory manifest (https://portal.azure.com, Azure Active Director
 {
 ...
   "groupMembershipClaims": "All",
+  "availableToOtherTenants": true,
 ...
 }
 ```
-![](AAD UI for App Registration)
+![AAD UI for App Registration](/IMG/2017-07-13_19-11-04 AAD Registration UI.png)
+![AAD Manifest](/IMG/2017-07-13_19-17-45 AAD Registration manifest.png)
 
 ### Startup.cs
+Startup.cs - DB Context for EF Core
+```csharp
+//DB
+services.AddDbContextPool<TenantContext>(
+    options => options.UseSqlServer(
+        Configuration.GetConnectionString("DefaultConnection")));
+```
+Startup.cs - get group guid from registration db (should be dynamics - demo here)
+```csharp
+List<string> groupGuid = new List<string>();
+groupGuid.Add("8542e184-3375-49de-8401-131a73ed9d9c");
+var sp = services.BuildServiceProvider();
+var db = sp.GetService<TenantContext>();
+db.Database.EnsureCreated();
+foreach (var item in db.Tenants.Where(p => p.TenantGuid != ""))
+{
+    groupGuid.Add(item.GroupGuid);
+}
+```
 
 Startup.cs - setup authorization and policies
 ```csharp
 ...
 services.AddAuthorization(options =>
 {
-    //In general - for single tenant, where we can control "names" of groups or claims
-
-    options.AddPolicy("OKPolicy", 
-        policy => policy.RequireClaim("tkclaim", "ok"));
-
-    options.AddPolicy("Admin1Policy", 
-        policy => policy.RequireClaim("tkgroups", "Admin1"));
-
-    //Require groupMembershipClaims in manifest (set to Group / All or 7)
-    //Guid from: https://portal.azure.com/?r=1#blade/Microsoft_AAD_IAM/GroupDetailsMenuBlade/Properties/groupId/8542e184-3375-49de-8401-131a73ed9d9c
-    //(Object id)
-    options.AddPolicy("GroupPolicyByGuid", 
-        policy => policy.RequireClaim("groups", 
-        new string[] { "8542e184-3375-49de-8401-131a73ed9d9c",
-            "57fda17b-7e8d-4ba6-8e0d-8a8fe4539564" }));
+    //In general - for single tenant, where we can control "names" of groups
+    options.AddPolicy("AdminPolicy", policy => policy.RequireClaim("tkgroups", "Admin"));
+    options.AddPolicy("Admin1Policy", policy => policy.RequireClaim("tkgroups", "Admin1"));
+                
+    //Require groupMembershipClaims in manifest
+    options.AddPolicy("AdminPolicyByGuid", policy => policy.RequireClaim("groups", groupGuid));
 });
 ```
+https://portal.office.com/account/#apps, App Permission, for user
+https://portal.office.com/myapps <-admin
+https://portal.azure.com/#blade/Microsoft_AAD_IAM/EnterpriseApplicationListBlade <- admin, enterprise apps (after sign up)
+As Admin:
+https://manage.windowsazure.com/@tkopaczmsE3.onmicrosoft.com#Workspaces/ActiveDirectoryExtension/Directory/a07319e7-7cb1-41fe-9ebf-250e5deba957/apps
 
 ### Use policies in HomeContoller.cs
 
